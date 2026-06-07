@@ -49,15 +49,11 @@ static void join_queue_b(void)
 }
 static void leave_queue_a(void)
 {
-    pthread_mutex_lock(&disp_mtx);
     queue_a--;
-    pthread_mutex_unlock(&disp_mtx);
 }
 static void leave_queue_b(void)
 {
-    pthread_mutex_lock(&disp_mtx);
     queue_b--;
-    pthread_mutex_unlock(&disp_mtx);
 }
 static void enter_bridge(int id, Direction dir)
 {
@@ -71,7 +67,11 @@ static void leave_bridge(Direction dir)
 {
     pthread_mutex_lock(&disp_mtx);
     bridge_car = -1;
-    if (dir == A_TO_B) arrived_b++; else arrived_a++;
+    if (dir == A_TO_B){
+        arrived_b++;
+    }else{
+        arrived_a++;
+    }
     print_state();
     pthread_mutex_unlock(&disp_mtx);
 }
@@ -136,19 +136,26 @@ static void barrier_b(int after_round)
     if (bar_b_count == N) {
         bar_b_count = 0;
         bar_b_gen++;
-        if (after_round) print_round_end();
+        if (after_round){
+            print_round_end();
+        }
         pthread_cond_broadcast(&bar_b_cond);
     } else {
-        while (gen == bar_b_gen)
+        while (gen == bar_b_gen){
             pthread_cond_wait(&bar_b_cond, &bar_b_mtx);
+        }
     }
     pthread_mutex_unlock(&bar_b_mtx);
 }
 
 static void do_barrier(int after_round)
 {
-    if (use_cond) barrier_b(after_round);
-    else          barrier_a(after_round);
+    if (use_cond){
+        barrier_b(after_round);
+    }
+    else{
+        barrier_a(after_round);
+    }
 }
 
 // Tryb A – mutexy + semafory
@@ -172,14 +179,18 @@ static void a_lock(int id, Direction dir)
         sem_post(&bridge_sem);
         usleep(1000 + rand() % 5000);
     }
-    if (dir == A_TO_B) leave_queue_a(); else leave_queue_b();
+    if (dir == A_TO_B){
+        leave_queue_a();
+    }else{
+        leave_queue_b();
+    }
     enter_bridge(id, dir);
 }
 
 static void a_unlock(Direction dir)
 {
     pthread_mutex_lock(&bridge_mtx_a);
-    if (--on_a == 0) dir_a = NONE;
+    if (--on_a == 0){dir_a = NONE;}
     pthread_mutex_unlock(&bridge_mtx_a);
     leave_bridge(dir);
     sem_post(&bridge_sem);
@@ -199,10 +210,15 @@ static void b_lock(int id, Direction dir)
     while (on_b > 0 || (dir_b != NONE && dir_b != dir))
         pthread_cond_wait(dir == A_TO_B ? &cond_ab : &cond_ba, &bridge_mtx_b);
     dir_b = dir; on_b++;
-    if (dir == A_TO_B) leave_queue_a(); else leave_queue_b();
-    /* enter_bridge pod mutexa – żadne inne auto nie wejdzie między unlock a enter */
     pthread_mutex_lock(&disp_mtx);
-    bridge_car = id; bridge_car_dir = dir;
+    if (dir == A_TO_B){
+        leave_queue_a();
+    } else {
+        leave_queue_b();
+    }
+    /* enter_bridge pod mutexa – żadne inne auto nie wejdzie między unlock a enter */
+    bridge_car = id;
+    bridge_car_dir = dir;
     print_state();
     pthread_mutex_unlock(&disp_mtx);
     pthread_mutex_unlock(&bridge_mtx_b);
@@ -211,13 +227,22 @@ static void b_lock(int id, Direction dir)
 static void b_unlock(Direction dir)
 {
     pthread_mutex_lock(&bridge_mtx_b);
-    if (--on_b == 0) {
+    --on_b;
+    pthread_mutex_lock(&disp_mtx);
+    bridge_car = -1;
+    if (dir == A_TO_B){
+        arrived_b++;
+    } else {
+        arrived_a++;
+    }
+    print_state();
+    pthread_mutex_unlock(&disp_mtx);
+    if (on_b == 0) {
         dir_b = NONE;
         pthread_cond_broadcast(&cond_ab);
         pthread_cond_broadcast(&cond_ba);
     }
     pthread_mutex_unlock(&bridge_mtx_b);
-    leave_bridge(dir);
 }
 
 // Wątki samochodów – wspólne dla obu trybów
@@ -229,14 +254,26 @@ static void *car_thread(void *arg)
 
     while (1) {
         usleep(50000 + rand() % 150000);
-        if (dir == A_TO_B) join_queue_a(); else join_queue_b();
+        if (dir == A_TO_B){
+            join_queue_a();
+        }else{
+            join_queue_b();
+        }
 
         /* czekaj aż wszyscy będą w kolejkach */
         do_barrier(0);
 
-        if (use_cond) b_lock(id, dir); else a_lock(id, dir);
+        if (use_cond){
+            b_lock(id, dir);
+        } else {
+            a_lock(id, dir);
+        }
         usleep(200000 + rand() % 200000);
-        if (use_cond) b_unlock(dir);   else a_unlock(dir);
+        if (use_cond) {
+            b_unlock(dir);
+        } else {
+            a_unlock(dir);
+        }
 
         /* czekaj aż wszyscy przejadą – ostatni resetuje liczniki */
         do_barrier(1);
