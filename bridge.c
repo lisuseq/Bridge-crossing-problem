@@ -47,19 +47,11 @@ static void join_queue_b(void)
     print_state();
     pthread_mutex_unlock(&disp_mtx);
 }
-static void leave_queue_a(void)
-{
-    queue_a--;
-}
-static void leave_queue_b(void)
-{
-    queue_b--;
-}
+
 static void enter_bridge(int id, Direction dir)
 {
     pthread_mutex_lock(&disp_mtx);
-    bridge_car = id;
-    bridge_car_dir = dir;
+    bridge_car = id; bridge_car_dir = dir;
     print_state();
     pthread_mutex_unlock(&disp_mtx);
 }
@@ -96,7 +88,7 @@ static void barrier_a(int after_round)
 {
     pthread_mutex_lock(&bar_a_mtx);
     bar_a_count++;
-    if (bar_a_count == N){
+    if (bar_a_count == N){ //
         bar_a_count = 0;
         if (after_round){
             print_round_end();
@@ -108,7 +100,7 @@ static void barrier_a(int after_round)
     pthread_mutex_unlock(&bar_a_mtx);
     sem_wait(&bar_a_sem1);
 
-    /* faza 2: czekaj aż wszyscy wyszli z sem_wait – zapobiega ponownemu użyciu */
+
     pthread_mutex_lock(&bar_a_mtx);
     bar_a_count++;
     if (bar_a_count == N) {
@@ -134,8 +126,7 @@ static void barrier_b(int after_round)
     int gen = bar_b_gen;
     bar_b_count++;
     if (bar_b_count == N) {
-        bar_b_count = 0;
-        bar_b_gen++;
+        bar_b_count = 0; bar_b_gen++;
         if (after_round){
             print_round_end();
         }
@@ -179,10 +170,10 @@ static void a_lock(int id, Direction dir)
         sem_post(&bridge_sem);
         usleep(1000 + rand() % 5000);
     }
-    if (dir == A_TO_B){
-        leave_queue_a();
+    if (dir == A_TO_B){ // usuwanie z kolejki
+        queue_a--;
     }else{
-        leave_queue_b();
+        queue_b--;
     }
     enter_bridge(id, dir);
 }
@@ -211,14 +202,12 @@ static void b_lock(int id, Direction dir)
         pthread_cond_wait(dir == A_TO_B ? &cond_ab : &cond_ba, &bridge_mtx_b);
     dir_b = dir; on_b++;
     pthread_mutex_lock(&disp_mtx);
-    if (dir == A_TO_B){
-        leave_queue_a();
+    if (dir == A_TO_B){ // usuwanie z kolejki
+        queue_a--;
     } else {
-        leave_queue_b();
+        queue_b--;
     }
-    /* enter_bridge pod mutexa – żadne inne auto nie wejdzie między unlock a enter */
-    bridge_car = id;
-    bridge_car_dir = dir;
+    bridge_car = id;bridge_car_dir = dir;
     print_state();
     pthread_mutex_unlock(&disp_mtx);
     pthread_mutex_unlock(&bridge_mtx_b);
