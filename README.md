@@ -1,8 +1,10 @@
-# Bridge crossing problem
+# Bridge crossing problem (Wąski most)
 
 ## Użycie:
 ```bash
-$ ./Bridge <liczba samochodów>
+$ ./bridge <liczba pojazdów> <tryb a|b>
 ```
 ## Opis
-Każdy samochód jest reprezentowany przez oddzielny wątek
+    a – mutexy + semafory (bez zmiennych warunkowych)
+    b – mutexy + zmienne warunkowe
+    Każdy samochód jest reprezentowany przez oddzielny wątek

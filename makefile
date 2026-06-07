@@ -1,7 +1,7 @@
 .RECIPEPREFIX = @
 
 all: 
-@ gcc main.c bridge.c show.c -o bridge -pthread
+@ gcc bridge.c -o bridge -pthread
 
 clean:
 @ rm -f bridge
