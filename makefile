@@ -1,7 +1,8 @@
 .RECIPEPREFIX = @
 
-all: 
-@ gcc bridge.c -o bridge -pthread
+all:
+@ mkdir -p bin 
+@ gcc bridge.c -o bin/bridge.exe -pthread
 
 clean:
-@ rm -f bridge
+@ rm -f bin/*
